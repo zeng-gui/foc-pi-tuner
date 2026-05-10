@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 项目
+*.log
+*.dat
+*.bin
+
+# 环境变量和密钥
+.env
+.env.local
+config/ai_config.yaml
+
+# Claude Code本地配置
+.claude/settings.local.json
+CLAUDE.local.md
+
+# 系统
+.DS_Store
+Thumbs.db
