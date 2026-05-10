@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOC PI参数整定工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .katex { font-size: 1.1em; }
+        .chat-message { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .result-card { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen" x-data="app()" x-cloak>
+    <!-- 顶部导航 -->
+    <nav class="bg-indigo-600 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <h1 class="text-xl font-bold">⚡ FOC PI参数整定工具</h1>
+            <div class="text-sm opacity-80">PMSM电机控制系统</div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <div class="flex gap-6">
+            <!-- 左侧导航 -->
+            <aside class="w-48 flex-shrink-0">
+                <div class="bg-white rounded-lg shadow p-2">
+                    <nav class="space-y-1">
+                        <button @click="currentPage = 'tune'"
+                                :class="currentPage === 'tune' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'"
+                                class="w-full text-left px-3 py-2 rounded-md text-sm font-medium">
+                            📊 离线整定
+                        </button>
+                        <button @click="currentPage = 'serial'"
+                                :class="currentPage === 'serial' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'"
+                                class="w-full text-left px-3 py-2 rounded-md text-sm font-medium">
+                            🔌 在线调试
+                        </button>
+                        <button @click="currentPage = 'ai'"
+                                :class="currentPage === 'ai' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'"
+                                class="w-full text-left px-3 py-2 rounded-md text-sm font-medium">
+                            🤖 AI助手
+                        </button>
+                        <button @click="currentPage = 'docs'"
+                                :class="currentPage === 'docs' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'"
+                                class="w-full text-left px-3 py-2 rounded-md text-sm font-medium">
+                            📖 原理文档
+                        </button>
+                    </nav>
+                </div>
+            </aside>
+
+            <!-- 主内容区 -->
+            <main class="flex-1 min-w-0">
+
+                <!-- 离线整定页面 -->
+                <div x-show="currentPage === 'tune'" class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- 左侧: 参数输入 -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">电机参数输入</h2>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-500 mb-2">电气参数</h3>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="text-xs text-gray-500">Rs (Ω)</label>
+                                            <input x-model.number="params.Rs" type="number" step="any" placeholder="定子电阻"
+                                                   class="w-full px-3 py-2 border rounded-md text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-500">Ld (H)</label>
+                                            <input x-model.number="params.Ld" type="number" step="any" placeholder="d轴电感"
+                                                   class="w-full px-3 py-2 border rounded-md text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-500">Lq (H)</label>
+                                            <input x-model.number="params.Lq" type="number" step="any" placeholder="q轴电感"
+                                                   class="w-full px-3 py-2 border rounded-md text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-500">Ψf (Wb)</label>
+                                            <input x-model.number="params.Psi_f" type="number" step="any" placeholder="永磁体磁链"
+                                                   class="w-full px-3 py-2 border rounded-md text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-500 mb-2">机械参数</h3>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="text-xs text-gray-500">J (kg·m²)</label>
+                                            <input x-model.number="params.J" type="number" step="any" placeholder="转动惯量"
+                                                   class="w-full px-3 py-2 border rounded-md text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-500">p (极对数)</label>
+                                            <input x-model.number="params.p" type="number" placeholder="极对数"
+                                                   class="w-full px-3 py-2 border rounded-md text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-500 mb-2">整定配置</h3>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="text-xs text-gray-500">整定方法</label>
+                                            <select x-model="config.method" class="w-full px-3 py-2 border rounded-md text-sm">
+                                                <option value="AUTO">自动选择</option>
+                                                <option value="BANDWIDTH">带宽法</option>
+                                                <option value="POLE_PLACEMENT">极点配置法</option>
+                                                <option value="ZIEGLER_NICHOLS">Z-N法</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-500">阻尼比 ζ</label>
+                                            <input x-model.number="config.damping" type="number" step="any" value="0.707"
+                                                   class="w-full px-3 py-2 border rounded-md text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-3 pt-2">
+                                    <button @click="runTuning()" :disabled="loading"
+                                            class="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-all duration-200">
+                                        <span x-show="!loading">开始整定</span>
+                                        <span x-show="loading" class="flex items-center justify-center">
+                                            <svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            计算中...
+                                        </span>
+                                    </button>
+                                    <button @click="resetParams()" class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                                        重置
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 右侧: 结果展示 -->
+                        <div class="space-y-6">
+                            <!-- 整定结果 -->
+                            <div x-show="result" class="bg-white rounded-lg shadow p-6 result-card">
+                                <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">整定结果</h2>
+
+                                <div class="space-y-4">
+                                    <template x-if="result?.current_d">
+                                        <div class="bg-blue-50 p-4 rounded-lg">
+                                            <h3 class="font-medium text-blue-800 mb-2">d轴电流环</h3>
+                                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                                <div><span class="text-gray-500">Kp:</span> <span class="font-mono font-bold" x-text="result.current_d.Kp.toFixed(4)"></span></div>
+                                                <div><span class="text-gray-500">Ki:</span> <span class="font-mono font-bold" x-text="result.current_d.Ki.toFixed(4)"></span></div>
+                                                <div><span class="text-gray-500">带宽:</span> <span class="font-mono" x-text="(result.current_d.bandwidth?.toFixed(0) || '-') + ' rad/s'"></span></div>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="result?.current_q">
+                                        <div class="bg-green-50 p-4 rounded-lg">
+                                            <h3 class="font-medium text-green-800 mb-2">q轴电流环</h3>
+                                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                                <div><span class="text-gray-500">Kp:</span> <span class="font-mono font-bold" x-text="result.current_q.Kp.toFixed(4)"></span></div>
+                                                <div><span class="text-gray-500">Ki:</span> <span class="font-mono font-bold" x-text="result.current_q.Ki.toFixed(4)"></span></div>
+                                                <div><span class="text-gray-500">带宽:</span> <span class="font-mono" x-text="(result.current_q.bandwidth?.toFixed(0) || '-') + ' rad/s'"></span></div>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="result?.speed">
+                                        <div class="bg-purple-50 p-4 rounded-lg">
+                                            <h3 class="font-medium text-purple-800 mb-2">速度环</h3>
+                                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                                <div><span class="text-gray-500">Kp:</span> <span class="font-mono font-bold" x-text="result.speed.Kp.toFixed(4)"></span></div>
+                                                <div><span class="text-gray-500">Ki:</span> <span class="font-mono font-bold" x-text="result.speed.Ki.toFixed(4)"></span></div>
+                                                <div><span class="text-gray-500">超调:</span> <span class="font-mono" x-text="(result.speed.overshoot?.toFixed(1) || '-') + '%'"></span></div>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- 速度环参数不足提示 -->
+                                    <template x-if="!result?.speed && result?.current_q">
+                                        <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                                            <div class="flex items-center">
+                                                <svg class="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                                </svg>
+                                                <span class="text-yellow-800 font-medium">速度环参数不足</span>
+                                            </div>
+                                            <p class="text-yellow-700 text-sm mt-2">
+                                                速度环整定需要以下参数：
+                                            </p>
+                                            <ul class="text-yellow-600 text-sm mt-1 list-disc list-inside">
+                                                <li>永磁体磁链 Ψf</li>
+                                                <li>转动惯量 J</li>
+                                                <li>极对数 p</li>
+                                            </ul>
+                                            <p class="text-yellow-600 text-sm mt-2">
+                                                请补充这些参数后重新整定。
+                                            </p>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- 调参指导 -->
+                                <template x-if="result?.tuning_guide?.length > 0">
+                                    <div class="mt-4">
+                                        <h3 class="text-sm font-medium text-gray-500 mb-2">调参指导</h3>
+                                        <ul class="text-sm space-y-1">
+                                            <template x-for="guide in result.tuning_guide" :key="guide">
+                                                <li class="text-gray-600" x-text="guide"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- 原理公式 -->
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">原理公式</h2>
+                                <div class="space-y-4 text-sm">
+                                    <div>
+                                        <h3 class="font-medium text-gray-700 mb-2" id="current-formula-title">电流环整定（带宽法）</h3>
+                                        <div class="bg-gray-50 p-3 rounded" id="formula-current"></div>
+                                        <p class="text-gray-500 mt-1 text-xs" id="current-formula-desc">其中 ωc 为期望电流环带宽，L为电感，R为电阻</p>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-medium text-gray-700 mb-2" id="speed-formula-title">速度环整定（带宽法）</h3>
+                                        <div class="bg-gray-50 p-3 rounded" id="formula-speed"></div>
+                                        <p class="text-gray-500 mt-1 text-xs" id="speed-formula-desc">其中 ωn 为自然频率，ζ为阻尼比，J为转动惯量，Kt为转矩常数</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 参考代码 -->
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">参考代码</h2>
+                                <div class="flex gap-2 mb-3">
+                                    <button @click="codeLang = 'c'" :class="codeLang === 'c' ? 'bg-indigo-600 text-white' : 'bg-gray-200'"
+                                            class="px-3 py-1 rounded text-sm">C语言</button>
+                                    <button @click="codeLang = 'python'" :class="codeLang === 'python' ? 'bg-indigo-600 text-white' : 'bg-gray-200'"
+                                            class="px-3 py-1 rounded text-sm">Python</button>
+                                </div>
+                                <pre><code class="language-c rounded text-sm" x-show="codeLang === 'c'" x-html="codeC"></code></pre>
+                                <pre><code class="language-python rounded text-sm" x-show="codeLang === 'python'" x-html="codePython"></code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 在线调试页面 -->
+                <div x-show="currentPage === 'serial'" class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">在线串口调试</h2>
+                    <p class="text-gray-500">串口调试功能开发中...</p>
+                    <p class="text-sm text-gray-400 mt-2">将支持：参数读写、实时波形监控、阶跃响应测试</p>
+                </div>
+
+                <!-- AI助手页面 -->
+                <div x-show="currentPage === 'ai'" class="bg-white rounded-lg shadow" style="height: calc(100vh - 180px);">
+                    <div class="flex flex-col h-full">
+                        <!-- 聊天头部 -->
+                        <div class="px-6 py-4 border-b">
+                            <h2 class="text-lg font-semibold text-gray-800">🤖 AI调参助手</h2>
+                            <p class="text-sm text-gray-500">描述您的问题，AI将为您提供调参建议</p>
+                        </div>
+
+                        <!-- 消息列表 -->
+                        <div class="flex-1 overflow-y-auto p-6 space-y-4" id="chatMessages">
+                            <template x-for="(msg, index) in chatMessages" :key="index">
+                                <div class="chat-message" :class="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
+                                    <div :class="msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-800'"
+                                         class="max-w-[80%] rounded-lg px-4 py-3 shadow-sm">
+                                        <div class="text-sm prose prose-sm max-w-none" x-html="renderMarkdown(msg.content)"></div>
+                                    </div>
+                                </div>
+                            </template>
+                            <div x-show="chatLoading" class="flex justify-start">
+                                <div class="bg-gray-100 rounded-lg px-4 py-3">
+                                    <div class="flex space-x-2">
+                                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 快捷问题 -->
+                        <div class="px-6 py-2 border-t bg-gray-50">
+                            <div class="flex flex-wrap gap-2">
+                                <button @click="sendQuickQuestion('电流环振荡怎么办？')"
+                                        class="px-3 py-1 bg-white border rounded-full text-xs hover:bg-indigo-50">电流环振荡</button>
+                                <button @click="sendQuickQuestion('速度环超调太大怎么调？')"
+                                        class="px-3 py-1 bg-white border rounded-full text-xs hover:bg-indigo-50">速度超调</button>
+                                <button @click="sendQuickQuestion('电机启动过流怎么解决？')"
+                                        class="px-3 py-1 bg-white border rounded-full text-xs hover:bg-indigo-50">启动过流</button>
+                                <button @click="sendQuickQuestion('低速运行抖动怎么处理？')"
+                                        class="px-3 py-1 bg-white border rounded-full text-xs hover:bg-indigo-50">低速抖动</button>
+                            </div>
+                        </div>
+
+                        <!-- 输入框 -->
+                        <div class="px-6 py-4 border-t">
+                            <div class="flex gap-3">
+                                <input x-model="chatInput" @keyup.enter="sendChat()"
+                                       placeholder="输入您的问题..."
+                                       class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500">
+                                <button @click="sendChat()" :disabled="chatLoading || !chatInput.trim()"
+                                        class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                                    发送
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 原理文档页面 -->
+                <div x-show="currentPage === 'docs'" class="space-y-6">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-6">📖 FOC控制原理与PI整定公式</h2>
+
+                        <div class="space-y-8">
+                            <!-- PMSM数学模型 -->
+                            <section>
+                                <h3 class="text-lg font-medium text-indigo-700 mb-3">1. PMSM数学模型</h3>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h4 class="font-medium text-gray-700 mb-2">dq坐标系电压方程</h4>
+                                    <div id="doc-voltage-eq" class="text-center py-2"></div>
+                                    <p class="text-sm text-gray-500 mt-2">其中：Rs为定子电阻，Ld/Lq为dq轴电感，ωe为电角速度，Ψf为永磁体磁链</p>
+                                </div>
+                                <div class="bg-gray-50 p-4 rounded-lg mt-3">
+                                    <h4 class="font-medium text-gray-700 mb-2">电磁转矩方程</h4>
+                                    <div id="doc-torque-eq" class="text-center py-2"></div>
+                                    <p class="text-sm text-gray-500 mt-2">SPM电机Ld=Lq，转矩仅由iq产生；IPM电机存在磁阻转矩</p>
+                                </div>
+                            </section>
+
+                            <!-- 电流环整定 -->
+                            <section>
+                                <h3 class="text-lg font-medium text-indigo-700 mb-3">2. 电流环PI整定</h3>
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <h4 class="font-medium text-blue-800 mb-2">带宽法</h4>
+                                    <p class="text-sm text-gray-600 mb-3">将电流环视为一阶系统，期望闭环带宽为 ωc：</p>
+                                    <div id="doc-current-bw" class="text-center py-2"></div>
+                                    <p class="text-sm text-gray-500 mt-2">带宽选择：ωc = 2π × (fsw/10)，fsw为PWM开关频率</p>
+                                </div>
+                            </section>
+
+                            <!-- 速度环整定 -->
+                            <section>
+                                <h3 class="text-lg font-medium text-indigo-700 mb-3">3. 速度环PI整定</h3>
+                                <div class="bg-purple-50 p-4 rounded-lg">
+                                    <h4 class="font-medium text-purple-800 mb-2">带宽法</h4>
+                                    <p class="text-sm text-gray-600 mb-3">将速度环视为二阶系统，期望自然频率 ωn，阻尼比 ζ：</p>
+                                    <div id="doc-speed-bw" class="text-center py-2"></div>
+                                    <p class="text-sm text-gray-500 mt-2">推荐阻尼比 ζ = 0.707（最佳阻尼），速度环带宽 = 电流环带宽 / 5~10</p>
+                                </div>
+                            </section>
+
+                            <!-- 调参指南 -->
+                            <section>
+                                <h3 class="text-lg font-medium text-indigo-700 mb-3">4. 调参指南</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="bg-red-50 p-4 rounded-lg">
+                                        <h4 class="font-medium text-red-800 mb-2">常见问题</h4>
+                                        <ul class="text-sm space-y-2 text-gray-700">
+                                            <li>• <strong>振荡</strong>：增益过高 → 减小Kp</li>
+                                            <li>• <strong>超调大</strong>：阻尼不足 → 增大Kp或减小Ki</li>
+                                            <li>• <strong>响应慢</strong>：带宽不足 → 增大Kp</li>
+                                            <li>• <strong>稳态误差</strong>：Ki不足 → 增大Ki</li>
+                                        </ul>
+                                    </div>
+                                    <div class="bg-green-50 p-4 rounded-lg">
+                                        <h4 class="font-medium text-green-800 mb-2">调试步骤</h4>
+                                        <ol class="text-sm space-y-2 text-gray-700 list-decimal list-inside">
+                                            <li>先调电流环，确保稳定</li>
+                                            <li>再调速度环，从小增益开始</li>
+                                            <li>观察阶跃响应波形</li>
+                                            <li>根据表现微调参数</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function app() {
+            return {
+                currentPage: 'tune',
+                loading: false,
+                params: { Rs: null, Ld: null, Lq: null, Psi_f: null, J: null, p: null },
+                config: { method: 'AUTO', damping: 0.707 },
+                result: null,
+                codeLang: 'c',
+                codeC: '',
+                codePython: '',
+                currentAlgorithm: 'bandwidth',
+
+                // 算法相关公式数据
+                formulas: {
+                    bandwidth: {
+                        current: {
+                            title: '带宽法 - 电流环',
+                            formula: 'K_p = \\omega_c \\times L, \\quad K_i = \\omega_c \\times R',
+                            description: '其中 ωc 为期望电流环带宽，L为电感，R为电阻'
+                        },
+                        speed: {
+                            title: '带宽法 - 速度环',
+                            formula: 'K_p = 2\\zeta\\omega_n \\frac{J}{K_t}, \\quad K_i = \\omega_n^2 \\frac{J}{K_t}',
+                            description: '其中 ωn 为自然频率，ζ为阻尼比，J为转动惯量，Kt为转矩常数'
+                        }
+                    },
+                    pole_placement: {
+                        current: {
+                            title: '极点配置法 - 电流环',
+                            formula: 'K_p = 2 \\times pole \\times L - R, \\quad K_i = pole^2 \\times L',
+                            description: '其中pole为期望极点位置，通常等于期望带宽'
+                        },
+                        speed: {
+                            title: '极点配置法 - 速度环',
+                            formula: 'K_p = \\frac{J(p_1 + p_2)}{K_t}, \\quad K_i = \\frac{J \\cdot p_1 \\cdot p_2}{K_t}',
+                            description: '其中p1、p2为期望的两个极点位置'
+                        }
+                    },
+                    ziegler_nichols: {
+                        current: {
+                            title: 'Ziegler-Nichols法 - 电流环',
+                            formula: '\\tau = \\frac{L}{R}, \\quad K_p = 0.9R, \\quad K_i = \\frac{K_p}{3.33\\tau}',
+                            description: '其中τ为电机时间常数'
+                        },
+                        speed: {
+                            title: 'Ziegler-Nichols法 - 速度环',
+                            formula: '\\tau_{eq} = \\frac{1}{\\omega_c}, \\quad K_p = \\frac{J}{K_t \\tau_{eq}}, \\quad K_i = \\frac{K_p}{2\\tau_{eq}}',
+                            description: '其中τ_eq为电流环等效时间常数'
+                        }
+                    }
+                },
+
+                // 聊天相关
+                chatMessages: [
+                    { role: 'assistant', content: '您好！我是FOC调参助手。我可以帮您：\n- 整定PI参数\n- 分析调参问题\n- 解释控制原理\n\n请描述您的问题或输入电机参数。' }
+                ],
+                chatInput: '',
+                chatLoading: false,
+
+                init() {
+                    this.renderFormulas();
+                    this.loadCodeExamples();
+                    this.$nextTick(() => hljs.highlightAll());
+
+                    // 监听整定方法变化
+                    this.$watch('config.method', (newVal) => {
+                        const methodMap = {
+                            'AUTO': 'bandwidth',
+                            'BANDWIDTH': 'bandwidth',
+                            'POLE_PLACEMENT': 'pole_placement',
+                            'ZIEGLER_NICHOLS': 'ziegler_nichols'
+                        };
+                        this.currentAlgorithm = methodMap[newVal] || 'bandwidth';
+                        this.renderFormulas();
+                        this.loadCodeExamples();
+                    });
+                },
+
+                renderFormulas(algorithm) {
+                    const algo = algorithm || this.currentAlgorithm;
+                    const formulas = this.formulas[algo];
+
+                    // 电流环公式
+                    katex.render(formulas.current.formula,
+                        document.getElementById('formula-current'), { throwOnError: false });
+                    katex.render(formulas.speed.formula,
+                        document.getElementById('formula-speed'), { throwOnError: false });
+
+                    // 更新公式标题和描述
+                    document.getElementById('current-formula-title').textContent = formulas.current.title;
+                    document.getElementById('speed-formula-title').textContent = formulas.speed.title;
+                    document.getElementById('current-formula-desc').textContent = formulas.current.description;
+                    document.getElementById('speed-formula-desc').textContent = formulas.speed.description;
+
+                    // 文档页面公式
+                    katex.render(String.raw`\begin{cases} V_d = R_s i_d + L_d \frac{di_d}{dt} - \omega_e L_q i_q \\ V_q = R_s i_q + L_q \frac{di_q}{dt} + \omega_e (L_d i_d + \Psi_f) \end{cases}`,
+                        document.getElementById('doc-voltage-eq'), { throwOnError: false });
+                    katex.render(String.raw`T_e = \frac{3}{2} p [\Psi_f i_q + (L_d - L_q) i_d i_q]`,
+                        document.getElementById('doc-torque-eq'), { throwOnError: false });
+                    katex.render(String.raw`\begin{cases} K_p = \omega_c \times L \\ K_i = \omega_c \times R \end{cases}`,
+                        document.getElementById('doc-current-bw'), { throwOnError: false });
+                    katex.render(String.raw`\begin{cases} K_p = 2\zeta\omega_n \frac{J}{K_t} \\ K_i = \omega_n^2 \frac{J}{K_t} \end{cases}`,
+                        document.getElementById('doc-speed-bw'), { throwOnError: false });
+                },
+
+                loadCodeExamples(algorithm) {
+                    const algo = algorithm || this.currentAlgorithm;
+
+                    const codeExamples = {
+                        bandwidth: {
+                            c: `/**
+ * PI控制器结构体 - 带宽法
+ */
+typedef struct {
+    float Kp;        // 比例增益
+    float Ki;        // 积分增益
+    float integral;  // 积分累加
+    float output;    // 输出
+    float out_max;   // 输出上限
+    float out_min;   // 输出下限
+} PI_Controller_t;
+
+/**
+ * 带宽法整定计算
+ * @param L 电感 (H)
+ * @param R 电阻 (Ohm)
+ * @param wc 期望带宽 (rad/s)
+ * @return PI控制器参数
+ */
+PI_Controller_t bandwidth_tune(
+    float L, float R, float wc)
+{
+    PI_Controller_t pi;
+    pi.Kp = wc * L;
+    pi.Ki = wc * R;
+    pi.integral = 0.0f;
+    pi.out_max = 24.0f;
+    pi.out_min = -24.0f;
+    return pi;
+}
+
+// 使用示例
+PI_Controller_t pi_id = bandwidth_tune(
+    0.001f, 0.5f, 1000.0f
+);`,
+                            python: `from dataclasses import dataclass
+
+@dataclass
+class PIController:
+    """带宽法PI控制器"""
+    Kp: float
+    Ki: float
+    integral: float = 0.0
+    out_max: float = float('inf')
+    out_min: float = float('-inf')
+
+def bandwidth_tune(L: float, R: float,
+                   wc: float) -> PIController:
+    """带宽法整定计算
+
+    Args:
+        L: 电感 (H)
+        R: 电阻 (Ohm)
+        wc: 期望带宽 (rad/s)
+
+    Returns:
+        PI控制器参数
+    """
+    Kp = wc * L
+    Ki = wc * R
+    return PIController(Kp=Kp, Ki=Ki)
+
+# 使用示例
+pi_id = bandwidth_tune(
+    L=0.001, R=0.5, wc=1000.0
+)`
+                        },
+                        pole_placement: {
+                            c: `/**
+ * 极点配置法PI控制器
+ */
+typedef struct {
+    float Kp;        // 比例增益
+    float Ki;        // 积分增益
+    float integral;  // 积分累加
+    float output;    // 输出
+    float out_max;   // 输出上限
+    float out_min;   // 输出下限
+} PI_Controller_t;
+
+/**
+ * 极点配置法整定计算
+ * @param L 电感 (H)
+ * @param R 电阻 (Ohm)
+ * @param pole 期望极点位置 (rad/s)
+ * @return PI控制器参数
+ */
+PI_Controller_t pole_placement_tune(
+    float L, float R, float pole)
+{
+    PI_Controller_t pi;
+    pi.Kp = 2.0f * pole * L - R;
+    pi.Ki = pole * pole * L;
+    pi.integral = 0.0f;
+    pi.out_max = 24.0f;
+    pi.out_min = -24.0f;
+    return pi;
+}
+
+// 使用示例
+PI_Controller_t pi_id = pole_placement_tune(
+    0.001f, 0.5f, 1000.0f
+);`,
+                            python: `from dataclasses import dataclass
+
+@dataclass
+class PIController:
+    """极点配置法PI控制器"""
+    Kp: float
+    Ki: float
+    integral: float = 0.0
+    out_max: float = float('inf')
+    out_min: float = float('-inf')
+
+def pole_placement_tune(L: float, R: float,
+                        pole: float) -> PIController:
+    """极点配置法整定计算
+
+    Args:
+        L: 电感 (H)
+        R: 电阻 (Ohm)
+        pole: 期望极点位置 (rad/s)
+
+    Returns:
+        PI控制器参数
+    """
+    Kp = 2.0 * pole * L - R
+    Ki = pole * pole * L
+    return PIController(Kp=Kp, Ki=Ki)
+
+# 使用示例
+pi_id = pole_placement_tune(
+    L=0.001, R=0.5, pole=1000.0
+)`
+                        },
+                        ziegler_nichols: {
+                            c: `/**
+ * Ziegler-Nichols法PI控制器
+ */
+typedef struct {
+    float Kp;        // 比例增益
+    float Ki;        // 积分增益
+    float integral;  // 积分累加
+    float output;    // 输出
+    float out_max;   // 输出上限
+    float out_min;   // 输出下限
+} PI_Controller_t;
+
+/**
+ * Ziegler-Nichols法整定计算
+ * @param L 电感 (H)
+ * @param R 电阻 (Ohm)
+ * @return PI控制器参数
+ */
+PI_Controller_t zn_tune(float L, float R)
+{
+    PI_Controller_t pi;
+    float tau = L / R;
+    pi.Kp = 0.9f * R;
+    pi.Ki = pi.Kp / (3.33f * tau);
+    pi.integral = 0.0f;
+    pi.out_max = 24.0f;
+    pi.out_min = -24.0f;
+    return pi;
+}
+
+// 使用示例
+PI_Controller_t pi_id = zn_tune(0.001f, 0.5f);`,
+                            python: `from dataclasses import dataclass
+
+@dataclass
+class PIController:
+    """Ziegler-Nichols法PI控制器"""
+    Kp: float
+    Ki: float
+    integral: float = 0.0
+    out_max: float = float('inf')
+    out_min: float = float('-inf')
+
+def zn_tune(L: float, R: float) -> PIController:
+    """Ziegler-Nichols法整定计算
+
+    Args:
+        L: 电感 (H)
+        R: 电阻 (Ohm)
+
+    Returns:
+        PI控制器参数
+    """
+    tau = L / R
+    Kp = 0.9 * R
+    Ki = Kp / (3.33 * tau)
+    return PIController(Kp=Kp, Ki=Ki)
+
+# 使用示例
+pi_id = zn_tune(L=0.001, R=0.5)`
+                        }
+                    };
+
+                    const examples = codeExamples[algo] || codeExamples.bandwidth;
+                    this.codeC = hljs.highlight(examples.c, { language: 'c' }).value;
+                    this.codePython = hljs.highlight(examples.python, { language: 'python' }).value;
+                },
+
+                async runTuning() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/api/tune', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                motor_params: this.params,
+                                method: this.config.method,
+                                damping: this.config.damping
+                            })
+                        });
+
+                        if (!response.ok) {
+                            const error = await response.json();
+                            alert('错误: ' + (error.detail || '请求失败'));
+                            return;
+                        }
+
+                        this.result = await response.json();
+                    } catch (err) {
+                        alert('请求失败: ' + err.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                resetParams() {
+                    this.params = { Rs: null, Ld: null, Lq: null, Psi_f: null, J: null, p: null };
+                    this.result = null;
+                },
+
+                renderMarkdown(text) {
+                    return marked.parse(text);
+                },
+
+                async sendChat() {
+                    if (!this.chatInput.trim() || this.chatLoading) return;
+
+                    const userMsg = this.chatInput.trim();
+                    this.chatMessages.push({ role: 'user', content: userMsg });
+                    this.chatInput = '';
+                    this.chatLoading = true;
+
+                    // 滚动到底部
+                    this.$nextTick(() => {
+                        const container = document.getElementById('chatMessages');
+                        container.scrollTop = container.scrollHeight;
+                    });
+
+                    try {
+                        const response = await fetch('/api/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                message: userMsg,
+                                history: this.chatMessages.slice(-10)
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('请求失败');
+                        }
+
+                        const result = await response.json();
+                        this.chatMessages.push({
+                            role: 'assistant',
+                            content: result.reply || '抱歉，我无法处理您的请求。'
+                        });
+                    } catch (err) {
+                        this.chatMessages.push({
+                            role: 'assistant',
+                            content: '抱歉，发生了错误：' + err.message
+                        });
+                    } finally {
+                        this.chatLoading = false;
+                        this.$nextTick(() => {
+                            const container = document.getElementById('chatMessages');
+                            container.scrollTop = container.scrollHeight;
+                        });
+                    }
+                },
+
+                sendQuickQuestion(question) {
+                    this.chatInput = question;
+                    this.sendChat();
+                }
+            };
+        }
+    </script>
+</body>
+</html>
