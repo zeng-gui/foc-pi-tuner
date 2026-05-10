@@ -1,0 +1,17 @@
+# 核心依赖
+pyserial>=3.5
+
+# Web框架
+fastapi>=0.100.0
+uvicorn>=0.23.0
+websockets>=11.0
+
+# 数据处理
+pydantic>=2.0.0
+
+# 可视化
+matplotlib>=3.7.0
+
+# AI集成
+openai>=1.0.0
+pyyaml>=6.0
