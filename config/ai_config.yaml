@@ -1,0 +1,8 @@
+ai:
+  provider: deepseek
+  api_key: sk-b047a56172bc4ca69a44d76065241206
+  base_url: https://api.deepseek.com/v1
+  model: deepseek-v4-flash
+  temperature: 0.7
+  max_tokens: 2048
+  timeout: 60.0
